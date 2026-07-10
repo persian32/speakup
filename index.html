@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speak Up · 영어 말하기 코칭</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --ink:#1C2321; --paper:#EBEDE6; --surface:#FBFBF8; --line:#D8DBD1;
+    --accent:#2E6E5A; --accent-soft:#DCE8E1; --rec:#C43A31; --rec-soft:#F3DCD9;
+    --warn:#BA7517; --muted:#767E77;
+    --mono:'SFMono-Regular',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;padding:24px 16px 48px}
+  .wrap{width:100%;max-width:560px}
+  h1{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+  .sub{margin-top:6px;font-size:.82rem;color:var(--muted);line-height:1.5}
+  .sub b{color:var(--accent);font-weight:700}
+  .status{margin:16px 0;font-size:.82rem;color:var(--muted);background:var(--surface);
+    border:1px solid var(--line);border-radius:10px;padding:11px 13px;line-height:1.5}
+  .status.ready{color:var(--accent);border-color:var(--accent-soft);background:var(--accent-soft)}
+  .status.err{color:var(--rec);background:var(--rec-soft);border-color:var(--rec-soft)}
+  .bar{height:5px;background:var(--line);border-radius:3px;margin-top:8px;overflow:hidden;display:none}
+  .bar.show{display:block}
+  .bar > i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;text-align:center}
+  canvas{width:100%;height:60px;display:block;border-radius:10px;background:var(--paper);border:1px solid var(--line);margin:14px 0 10px}
+  .timer{font-family:var(--mono);font-size:2.4rem;font-weight:600;line-height:1}
+  .timer.rec{color:var(--rec)}
+  .state{margin-top:6px;font-size:.8rem;color:var(--muted);height:1.1em}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--rec);margin-right:6px;vertical-align:middle}
+  .rec-on .dot{animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  button{font-family:var(--sans);font-weight:700;font-size:.95rem;border:none;border-radius:11px;
+    padding:13px 22px;cursor:pointer;transition:transform .05s,background .15s}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .primary{background:var(--accent);color:#fff;min-width:150px;margin-top:16px}
+  .primary.stop{background:var(--rec)}
+  .fb{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:none}
+  .fb.show{display:block}
+  .fb .top{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:.98rem;font-weight:700}
+  .heard{font-size:.78rem;color:var(--muted);margin-bottom:6px}
+  .heardbox{font-size:.95rem;line-height:1.6;padding:10px 12px;background:var(--paper);border-radius:8px;margin-bottom:16px}
+  .sec{margin-bottom:16px}
+  .sec h3{font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:8px}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .m{background:var(--paper);border-radius:8px;padding:9px 11px}
+  .m .l{font-size:.72rem;color:var(--muted)}
+  .m .v{font-size:.92rem;font-weight:700;margin-top:2px}
+  .m .v.warn{color:var(--warn)}
+  .hint{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:10px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .actions button{margin:0;flex:1;min-width:130px;padding:12px 14px;font-size:.9rem}
+  .send{background:var(--accent);color:#fff}
+  .copy{background:var(--accent-soft);color:var(--accent)}
+  .hint2{font-size:.74rem;color:var(--muted);margin-top:8px;line-height:1.5}
+  .list{margin-top:26px}
+  .list h2{font-size:.82rem;font-weight:700;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:10px}
+  .empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:20px;text-align:center;color:var(--muted);font-size:.85rem}
+  .item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .item .ih{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .item .nm{font-weight:700;font-size:.95rem}
+  .item .mt{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .item audio{width:100%;margin-top:8px;height:32px}
+  .item .ia{display:flex;gap:8px;margin-top:8px}
+  .item .ia button{padding:7px 12px;font-size:.78rem;border-radius:8px}
+  .review{background:var(--accent-soft);color:var(--accent)}
+  .del{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .note{margin-top:22px;font-size:.76rem;color:var(--muted);line-height:1.55;background:var(--paper);border-radius:10px;padding:11px 13px}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Speak Up!</h1>
+  <p class="sub">영어로 자유롭게 말하면, 받아쓰기와 리듬 측정은 <b>이 기기 안에서</b> 하고, 버튼으로 <b>내 AI</b>에 보내 문법·표현 피드백을 받아요.</p>
+
+  <div class="status" id="status">발음 인식 준비를 시작합니다…
+    <div class="bar" id="bar"><i></i></div>
+  </div>
+
+  <div class="card" id="card">
+    <canvas id="wave" width="1120" height="120" aria-hidden="true"></canvas>
+    <div class="timer" id="timer">00:00</div>
+    <div class="state" id="stateLine"></div>
+    <button class="primary" id="recBtn" disabled>● 녹음 시작</button>
+  </div>
+
+  <div class="fb" id="fb">
+    <div class="top"><span id="fbTitle">피드백 준비 완료</span></div>
+    <div class="heard">들린 문장 · 이렇게 들렸어요</div>
+    <div class="heardbox" id="heard"></div>
+
+    <div class="sec">
+      <h3>측정된 리듬 (기기에서 잰 값)</h3>
+      <div class="metrics" id="metrics"></div>
+    </div>
+
+    <div class="sec">
+      <h3>문법·표현 피드백 받기</h3>
+      <p class="hint">'ChatGPT 열기'를 누르면 프롬프트가 <b>채워진 채로</b> ChatGPT가 열려요. Gemini 등 다른 AI는 '프롬프트 복사'를 눌러 붙여넣기 하세요. (내 문장 텍스트만 전달돼요.)</p>
+      <div class="actions">
+        <button class="send" id="toChatgpt">ChatGPT 열기</button>
+        <button class="copy" id="copyPrompt">프롬프트 복사 (Gemini 등)</button>
+      </div>
+      <p class="hint2" id="sendMsg"></p>
+    </div>
+  </div>
+
+  <div class="list">
+    <h2>내 연습 기록 <span id="count">0개</span></h2>
+    <div id="items"></div>
+    <div class="empty" id="empty">아직 연습 기록이 없어요. 영어로 한 문장 말해보세요.</div>
+  </div>
+
+  <p class="note"><b>목소리는 기기 밖으로 나가지 않아요.</b> 내 AI로는 받아쓴 문장 텍스트만 전달됩니다.
+  첫 실행 때 인식 프로그램(약 150MB)을 한 번 내려받으면 이후에는 인터넷 없이도 녹음·받아쓰기가 돼요.
+  녹음은 이 브라우저에만 저장됩니다.</p>
+</div>
+
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
+env.allowLocalModels = false;
+
+const $ = id => document.getElementById(id);
+const statusEl=$('status'), barEl=$('bar'), recBtn=$('recBtn'), timerEl=$('timer'),
+      stateLine=$('stateLine'), cardEl=$('card'), canvas=$('wave'), ctx=canvas.getContext('2d'),
+      fbEl=$('fb'), heardEl=$('heard'), metricsEl=$('metrics'), itemsEl=$('items'),
+      emptyEl=$('empty'), countEl=$('count');
+
+let transcriber=null, modelReady=false;
+let stream=null, recorder=null, chunks=[], isRec=false, seconds=0, timerId=null;
+let audioCtx=null, analyser=null, rafId=null, mime='', ext='webm';
+let currentPrompt='';
+
+async function loadModel(){
+  try{
+    barEl.classList.add('show');
+    transcriber = await pipeline('automatic-speech-recognition','onnx-community/whisper-base.en',{
+      progress_callback: p => {
+        if(p.status==='progress' && p.total){
+          const pct=Math.round(p.loaded/p.total*100);
+          barEl.querySelector('i').style.width=pct+'%';
+          statusEl.firstChild.textContent=`발음 인식 준비 중… ${pct}% (첫 방문 시 1회 다운로드)`;
+        }
+      }
+    });
+    modelReady=true;
+    barEl.classList.remove('show');
+    statusEl.classList.add('ready');
+    statusEl.firstChild.textContent='준비 완료. 영어로 말해보세요.';
+    recBtn.disabled=false;
+  }catch(e){
+    statusEl.classList.add('err');
+    statusEl.firstChild.textContent='인식 프로그램을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해주세요. (HTTPS 주소에서만 동작)';
+    console.error(e);
+  }
+}
+
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function drawWave(){
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h); ctx.lineWidth=3;
+  ctx.strokeStyle = isRec ? cssv('--rec') : cssv('--muted');
+  ctx.beginPath();
+  if(analyser && isRec){
+    const buf=new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(buf);
+    const step=w/buf.length;
+    for(let i=0;i<buf.length;i++){const y=(buf[i]/255)*h; i===0?ctx.moveTo(0,y):ctx.lineTo(i*step,y);}
+  } else { ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); }
+  ctx.stroke();
+  rafId=requestAnimationFrame(drawWave);
+}
+function fmt(s){s=Math.floor(s);const m=String(Math.floor(s/60)).padStart(2,'0'),x=String(s%60).padStart(2,'0');return m+':'+x;}
+
+function pickMime(){
+  for(const t of ['audio/webm;codecs=opus','audio/webm','audio/mp4']) if(MediaRecorder.isTypeSupported(t)) return t;
+  return '';
+}
+async function startRec(){
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ stateLine.textContent='마이크 권한을 허용해주세요.'; return; }
+  mime=pickMime(); ext=mime.includes('mp4')?'m4a':'webm';
+  recorder = mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
+  chunks=[];
+  recorder.ondataavailable=e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
+  recorder.onstop=onStop;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  analyser=audioCtx.createAnalyser(); analyser.fftSize=1024;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  seconds=0; timerEl.textContent='00:00';
+  recorder.start(1000);
+  isRec=true; timerId=setInterval(()=>{seconds++;timerEl.textContent=fmt(seconds);},1000);
+  recBtn.textContent='■ 정지'; recBtn.classList.add('stop');
+  timerEl.classList.add('rec'); cardEl.classList.add('rec-on');
+  stateLine.innerHTML='<span class="dot"></span>녹음 중';
+  fbEl.classList.remove('show');
+}
+function stopRec(){ if(recorder&&recorder.state!=='inactive') recorder.stop(); }
+
+async function onStop(){
+  const blob=new Blob(chunks,{type:mime||'audio/webm'});
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  if(audioCtx) audioCtx.close();
+  clearInterval(timerId); isRec=false;
+  recBtn.textContent='● 녹음 시작'; recBtn.classList.remove('stop');
+  timerEl.classList.remove('rec'); cardEl.classList.remove('rec-on');
+  stateLine.textContent='받아쓰는 중…'; recBtn.disabled=true;
+  try{
+    const {samples,duration}=await decodeTo16k(blob);
+    const asr=await transcribe(samples);
+    const analysis=analyze(asr,samples,duration);
+    const rec={id:Date.now(), name:new Date().toLocaleString('ko-KR'), blob, ext,
+      transcript:(asr.text||'').trim(), analysis, dur:duration};
+    await dbPut(rec);
+    renderResult(rec);
+    await refreshList();
+  }catch(e){
+    console.error(e); stateLine.textContent='분석에 문제가 있었어요. 다시 시도해주세요.';
+  }
+  recBtn.disabled=false; stateLine.textContent='';
+}
+
+async function decodeTo16k(blob){
+  const arr=await blob.arrayBuffer();
+  const tmp=new (window.AudioContext||window.webkitAudioContext)();
+  const decoded=await tmp.decodeAudioData(arr);
+  const duration=decoded.duration;
+  const off=new OfflineAudioContext(1, Math.ceil(decoded.duration*16000), 16000);
+  const src=off.createBufferSource(); src.buffer=decoded; src.connect(off.destination); src.start();
+  const rendered=await off.startRendering();
+  tmp.close();
+  return {samples:rendered.getChannelData(0), duration};
+}
+async function transcribe(samples){
+  let out;
+  try{ out=await transcriber(samples,{return_timestamps:'word',chunk_length_s:30}); }
+  catch(_){ out=await transcriber(samples,{chunk_length_s:30}); }
+  return out;
+}
+
+function analyze(asr,samples,duration){
+  const text=(asr.text||'').trim();
+  const words=text.split(/\s+/).filter(w=>/[a-z]/i.test(w));
+  const wpm = duration>0 ? Math.round(words.length/(duration/60)) : 0;
+  let longPauses=0, hasTimes=false;
+  const chunks=asr.chunks||[];
+  if(chunks.length>1 && chunks[0].timestamp){
+    hasTimes=true;
+    for(let i=1;i<chunks.length;i++){
+      const prevEnd=chunks[i-1].timestamp[1], curStart=chunks[i].timestamp[0];
+      if(prevEnd!=null && curStart!=null && (curStart-prevEnd)>0.7) longPauses++;
+    }
+  }
+  const pitch=pitchRangeSemitones(samples,16000);
+  return {wordCount:words.length, wpm, longPauses, hasTimes, pitch};
+}
+function pitchRangeSemitones(buf,sr){
+  const frame=1024, hop=512, pitches=[];
+  for(let i=0;i+frame<buf.length;i+=hop){
+    const f=autoCorr(buf.subarray(i,i+frame),sr);
+    if(f>70 && f<400) pitches.push(f);
+  }
+  if(pitches.length<8) return null;
+  pitches.sort((a,b)=>a-b);
+  const lo=pitches[Math.floor(pitches.length*0.1)], hi=pitches[Math.floor(pitches.length*0.9)];
+  return 12*Math.log2(hi/lo);
+}
+function autoCorr(buf,sr){
+  let rms=0; for(let i=0;i<buf.length;i++) rms+=buf[i]*buf[i];
+  if(Math.sqrt(rms/buf.length)<0.01) return -1;
+  let best=-1,bestOff=-1; const minP=Math.floor(sr/400),maxP=Math.floor(sr/70);
+  for(let off=minP;off<=maxP;off++){
+    let corr=0; for(let i=0;i<buf.length-off;i++) corr+=buf[i]*buf[i+off];
+    if(corr>best){best=corr;bestOff=off;}
+  }
+  return bestOff>0? sr/bestOff : -1;
+}
+
+function labels(a){
+  const rate = a.wpm<90?'느린 편':a.wpm>165?'빠른 편':'적당함';
+  const flat = a.pitch!=null && a.pitch<3.5;
+  const pitch = a.pitch==null?'측정 어려움':(flat?'다소 평평함':'자연스러움');
+  return {rate, rateWarn:(a.wpm<90||a.wpm>165), pitch, flat};
+}
+
+function buildPrompt(transcript, a){
+  const L=labels(a);
+  const pause = a.hasTimes ? `${a.longPauses}회` : '정보 없음';
+  return `한국 고등학생의 영어 말하기 코치로서, 학생에게 직접 짧고 친근한 한국어로 피드백해줘.
+말한 문장(음성인식): "${transcript}"
+측정: 속도 ${a.wpm}단어/분(${L.rate}), 억양 ${L.pitch}, 긴멈춤 ${pause}.
+① 문법·표현: 고칠 점 1~2개를 '고치기 전→후'와 한 줄 이유로.
+② 발음: 어려운 소리(r/l·f/v·th·받침) 든 단어 1~2개의 입술·혀·이 모양을 구체적으로.
+③ 억양·리듬: 측정값을 근거로 바로 따라 할 수 있는 행동으로.
+칭찬만 말고 항목마다 개선점을 꼭 넣어줘(잘한 점은 한마디만). 음성인식 오류로 보이면 학생 실수로 단정 말고 표시만 해줘. 발음은 소리를 직접 들은 게 아니니 '틀렸다' 대신 '이렇게 하면 좋아'로 알려줘.`;
+}
+
+function renderResult(rec){
+  const a=rec.analysis, L=labels(a);
+  heardEl.textContent = rec.transcript ? '"'+rec.transcript+'"' : '(소리를 알아듣지 못했어요. 조금 더 또렷하게 말해보세요.)';
+  metricsEl.innerHTML=`
+    <div class="m"><div class="l">말하기 속도</div><div class="v ${L.rateWarn?'warn':''}">${a.wpm||'-'}어/분 · ${L.rate}</div></div>
+    <div class="m"><div class="l">억양</div><div class="v ${L.flat?'warn':''}">${L.pitch}</div></div>
+    ${a.hasTimes?`<div class="m" style="grid-column:1/-1"><div class="l">끊김</div><div class="v ${a.longPauses>1?'warn':''}">${a.longPauses}회 긴 멈춤</div></div>`:''}`;
+  currentPrompt = buildPrompt(rec.transcript||'', a);
+  fbEl.classList.add('show');
+  fbEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+$('toChatgpt').onclick=()=>{
+  if(!currentPrompt) return;
+  const url='https://chatgpt.com/?q='+encodeURIComponent(currentPrompt);
+  if(url.length < 3500){
+    window.open(url,'_blank','noopener');
+    $('sendMsg').textContent='ChatGPT가 열리면 잠시 뒤 피드백이 나와요.';
+  } else {
+    navigator.clipboard.writeText(currentPrompt).catch(()=>{});
+    window.open('https://chatgpt.com/','_blank','noopener');
+    $('sendMsg').textContent='문장이 길어 자동 입력이 안 돼요. 프롬프트를 복사했으니 입력창에 붙여넣기(Ctrl+V) 하세요.';
+  }
+};
+$('copyPrompt').onclick=async()=>{
+  if(!currentPrompt) return;
+  const btn=$('copyPrompt');
+  try{ await navigator.clipboard.writeText(currentPrompt); btn.textContent='복사됨!'; }
+  catch(_){ btn.textContent='복사 실패'; }
+  setTimeout(()=>btn.textContent='프롬프트 복사 (Gemini 등)',1500);
+};
+
+let db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open('speak-coach',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('recs',{keyPath:'id'});
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+  });
+}
+async function dbPut(rec){ db=db||await openDB(); return new Promise((res,rej)=>{const tx=db.transaction('recs','readwrite');tx.objectStore('recs').put(rec);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}); }
+async function dbAll(){ db=db||await openDB(); return new Promise((res,rej)=>{const req=db.transaction('recs').objectStore('recs').getAll();req.onsuccess=()=>res(req.result||[]);req.onerror=()=>rej(req.error);}); }
+async function dbDel(id){ db=db||await openDB(); return new Promise((res,rej)=>{const tx=db.transaction('recs','readwrite');tx.objectStore('recs').delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}); }
+
+async function refreshList(){
+  const all=(await dbAll()).sort((a,b)=>b.id-a.id);
+  countEl.textContent=all.length+'개';
+  emptyEl.style.display=all.length?'none':'block';
+  itemsEl.innerHTML='';
+  all.forEach((r,i)=>{
+    const url=URL.createObjectURL(r.blob);
+    const el=document.createElement('div'); el.className='item';
+    el.innerHTML=`<div class="ih"><span class="nm">${all.length-i}. ${r.name}</span>
+      <span class="mt">${fmt(r.dur||0)}</span></div>
+      <div class="heard" style="margin:6px 0 0">"${(r.transcript||'').slice(0,80)}${(r.transcript||'').length>80?'…':''}"</div>
+      <audio controls src="${url}"></audio>
+      <div class="ia"><button class="review">피드백 다시 보기</button><button class="del">삭제</button></div>`;
+    el.querySelector('.review').onclick=()=>renderResult(r);
+    el.querySelector('.del').onclick=async()=>{await dbDel(r.id);await refreshList();};
+    itemsEl.appendChild(el);
+  });
+}
+
+recBtn.onclick=()=> isRec?stopRec():startRec();
+drawWave();
+refreshList();
+loadModel();
+</script>
+</body>
+</html>
