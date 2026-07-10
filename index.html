@@ -78,12 +78,25 @@
   .del{background:transparent;color:var(--muted);border:1px solid var(--line)}
   .note{margin-top:22px;font-size:.76rem;color:var(--muted);line-height:1.55;background:var(--paper);border-radius:10px;padding:11px 13px}
   .note b{color:var(--ink)}
+  .banner{display:none;background:#FAEEDA;border:1px solid #E7C98B;border-radius:10px;padding:12px 13px;margin:16px 0;font-size:.85rem;line-height:1.55;color:#7A4E12}
+  .banner b{color:#7A4E12}
+  .banner button{margin-top:9px;background:var(--warn);color:#fff;font-size:.8rem;font-weight:700;padding:8px 14px;border-radius:8px;border:none;cursor:pointer}
+  .michelp{display:none;background:var(--rec-soft);border-radius:10px;padding:12px 13px;margin-top:12px;font-size:.85rem;line-height:1.6;color:var(--rec)}
+  .michelp.show{display:block}
+  .michelp b{color:var(--rec)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Speak Up!</h1>
   <p class="sub">영어로 자유롭게 말하면, 받아쓰기와 리듬 측정은 <b>이 기기 안에서</b> 하고, 버튼으로 <b>내 AI</b>에 보내 문법·표현 피드백을 받아요.</p>
+
+  <div class="banner" id="inappBanner">
+    <b>⚠️ 이 화면에서는 마이크가 안 될 수 있어요.</b><br>
+    오른쪽 위 <b>⋮</b> 메뉴에서 <b>'Chrome으로 열기'</b>(아이폰은 Safari)를 눌러 다시 들어와 주세요.<br>
+    그 메뉴가 없으면, <b>크롬(또는 사파리)을 직접 열고</b> 주소창에 <b>persian32.github.io/speakup</b> 를 입력하세요.
+    <br><button id="copyUrl">주소 복사</button>
+  </div>
 
   <div class="status" id="status">발음 인식 준비를 시작합니다…
     <div class="bar" id="bar"><i></i></div>
@@ -95,6 +108,8 @@
     <div class="state" id="stateLine"></div>
     <button class="primary" id="recBtn" disabled>● 녹음 시작</button>
   </div>
+
+  <div class="michelp" id="micHelp"></div>
 
   <div class="fb" id="fb">
     <div class="top"><span id="fbTitle">피드백 준비 완료</span></div>
@@ -189,7 +204,15 @@ function pickMime(){
 }
 async function startRec(){
   try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
-  catch(e){ stateLine.textContent='마이크 권한을 허용해주세요.'; return; }
+  catch(e){
+    stateLine.textContent='';
+    const h=$('micHelp'); h.classList.add('show');
+    h.innerHTML = (e && e.name==='NotAllowedError')
+      ? '마이크가 꺼져 있어요. 주소창의 <b>자물쇠(또는 ⓘ)</b> 아이콘 → <b>마이크</b> → <b>허용</b>으로 바꾼 뒤 <b>새로고침</b> 해주세요.<br>QR·단톡으로 열었다면 오른쪽 위 <b>⋮</b> → <b>Chrome으로 열기</b>(아이폰은 Safari), 그 메뉴가 없으면 크롬을 직접 열고 주소창에 <b>persian32.github.io/speakup</b> 를 입력하세요.'
+      : '마이크를 사용할 수 없어요. QR·단톡으로 열었다면 오른쪽 위 <b>⋮</b> 메뉴 → <b>Chrome으로 열기</b>(아이폰은 Safari), 그 메뉴가 없으면 크롬을 직접 열고 주소창에 <b>persian32.github.io/speakup</b> 를 입력하세요.';
+    return;
+  }
+  $('micHelp').classList.remove('show');
   mime=pickMime(); ext=mime.includes('mp4')?'m4a':'webm';
   recorder = mime?new MediaRecorder(stream,{mimeType:mime}):new MediaRecorder(stream);
   chunks=[];
@@ -368,6 +391,18 @@ async function refreshList(){
     itemsEl.appendChild(el);
   });
 }
+
+// 인앱 브라우저(QR·단톡 등 미니 브라우저) 감지 → 안내 띠 표시
+(function(){
+  const ua=navigator.userAgent||'';
+  const inApp=/KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|\bLine\b|NAVER|DaumApps|SnapChat|Twitter|everytime|; wv\)/i.test(ua);
+  if(inApp) $('inappBanner').style.display='block';
+})();
+$('copyUrl').onclick=async()=>{
+  try{ await navigator.clipboard.writeText(location.href); $('copyUrl').textContent='복사됨!'; }
+  catch(_){ $('copyUrl').textContent='복사 실패'; }
+  setTimeout(()=>$('copyUrl').textContent='주소 복사',1500);
+};
 
 recBtn.onclick=()=> isRec?stopRec():startRec();
 drawWave();
