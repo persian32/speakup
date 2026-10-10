@@ -63,6 +63,10 @@
   .actions button{margin:0;flex:1;min-width:130px;padding:12px 14px;font-size:.9rem}
   .send{background:var(--accent);color:#fff}
   .copy{background:var(--accent-soft);color:var(--accent)}
+  .concern{margin:0 0 12px}
+  .concern label{display:block;font-size:.82rem;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .concern textarea{width:100%;min-height:58px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:.9rem;resize:vertical;background:var(--surface);color:var(--ink)}
+  .concern textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
   .hint2{font-size:.74rem;color:var(--muted);margin-top:8px;line-height:1.5}
   .list{margin-top:26px}
   .list h2{font-size:.82rem;font-weight:700;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:10px}
@@ -124,6 +128,10 @@
     <div class="sec">
       <h3>문법·표현 피드백 받기</h3>
       <p class="hint">'ChatGPT 열기'를 누르면 프롬프트가 <b>채워진 채로</b> ChatGPT가 열려요. Gemini 등 다른 AI는 '프롬프트 복사'를 눌러 붙여넣기 하세요. (내 문장 텍스트만 전달돼요.)</p>
+      <div class="concern">
+        <label for="concern">방금 영어로 말할 때 가장 어려웠던 점 (선택)</label>
+        <textarea id="concern" maxlength="200" placeholder="예: 과거형을 맞게 썼는지 모르겠어요 / 단어가 생각이 안 났어요 / 자꾸 끊겼어요"></textarea>
+      </div>
       <div class="actions">
         <button class="send" id="toChatgpt">ChatGPT 열기</button>
         <button class="copy" id="copyPrompt">프롬프트 복사 (Gemini 등)</button>
@@ -157,6 +165,7 @@ let transcriber=null, modelReady=false;
 let stream=null, recorder=null, chunks=[], isRec=false, seconds=0, timerId=null;
 let audioCtx=null, analyser=null, rafId=null, mime='', ext='webm';
 let currentPrompt='';
+let currentRec=null;
 
 async function loadModel(){
   try{
@@ -317,11 +326,14 @@ function labels(a){
   return {rate, rateWarn:(a.wpm<90||a.wpm>165), pitch, flat};
 }
 
-function buildPrompt(transcript, a){
+function buildPrompt(transcript, a, concern){
   const L=labels(a);
+  // [어려운 점] 학생이 직접 적은 고민 — 프롬프트를 간소화할 때도 이 블록은 유지
+  const c=(concern||'').trim();
+  const concernLine = c ? `\n학생이 스스로 적은 가장 어려웠던 점: "${c}"\n이 고민에 먼저 답한 다음, 아래 항목으로 넘어가줘.` : '';
   const pause = a.hasTimes ? `${a.longPauses}회` : '정보 없음';
   return `한국 고등학생의 영어 말하기 코치로서, 학생에게 직접 짧고 친근한 한국어로 피드백해줘.
-말한 문장(음성인식): "${transcript}"
+말한 문장(음성인식): "${transcript}"${concernLine}
 측정: 속도 ${a.wpm}단어/분(${L.rate}), 억양 ${L.pitch}, 긴멈춤 ${pause}.
 ① 문법·표현: 고칠 점 1~2개를 '고치기 전→후'와 한 줄 이유로.
 ② 발음: 어려운 소리(r/l·f/v·th·받침) 든 단어 1~2개의 입술·혀·이 모양을 구체적으로.
@@ -336,12 +348,22 @@ function renderResult(rec){
     <div class="m"><div class="l">말하기 속도</div><div class="v ${L.rateWarn?'warn':''}">${a.wpm||'-'}어/분 · ${L.rate}</div></div>
     <div class="m"><div class="l">억양</div><div class="v ${L.flat?'warn':''}">${L.pitch}</div></div>
     ${a.hasTimes?`<div class="m" style="grid-column:1/-1"><div class="l">끊김</div><div class="v ${a.longPauses>1?'warn':''}">${a.longPauses}회 긴 멈춤</div></div>`:''}`;
-  currentPrompt = buildPrompt(rec.transcript||'', a);
+  currentRec = rec;
+  $('concern').value = rec.concern||'';
+  currentPrompt = buildPrompt(rec.transcript||'', a, rec.concern);
   fbEl.classList.add('show');
   fbEl.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// 버튼을 누른 즉시(동기) 프롬프트를 만든다 — 저장은 뒤에서. await 후 창을 열면 휴대폰 브라우저가 팝업을 막을 수 있음
+function refreshPrompt(){
+  if(!currentRec) return;
+  const c=$('concern').value.trim();
+  currentPrompt = buildPrompt(currentRec.transcript||'', currentRec.analysis, c);
+  if(c!==(currentRec.concern||'')){ currentRec.concern=c; dbPut(currentRec).catch(()=>{}); }
+}
 $('toChatgpt').onclick=()=>{
+  refreshPrompt();
   if(!currentPrompt) return;
   const url='https://chatgpt.com/?q='+encodeURIComponent(currentPrompt);
   if(url.length < 3500){
@@ -354,6 +376,7 @@ $('toChatgpt').onclick=()=>{
   }
 };
 $('copyPrompt').onclick=async()=>{
+  refreshPrompt();
   if(!currentPrompt) return;
   const btn=$('copyPrompt');
   try{ await navigator.clipboard.writeText(currentPrompt); btn.textContent='복사됨!'; }
