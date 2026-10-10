@@ -1,5 +1,7 @@
 # Speak Up!
 
+**▶ Live site / 접속:** https://persian32.github.io/speakup/
+
 **English summary**
 
 Speak Up is a free web tool that helps Korean high school students practice English speaking and get feedback from the AI assistant they already use (ChatGPT, Gemini, etc.).
@@ -28,9 +30,6 @@ Speak Up is a free web tool that helps Korean high school students practice Engl
 - **무료**입니다. 별도 계정이나 비용이 필요 없습니다.
 - **목소리는 기기 밖으로 나가지 않습니다.** 음성인식은 브라우저 안에서 처리되고, 내 AI로는 받아쓴 문장 텍스트만 전달됩니다.
 - 녹음은 **이 브라우저에만** 저장되어 다시 듣기·복습할 수 있습니다.
-
-## 접속
-https://persian32.github.io/speakup/
 
 ## 참고
 - 마이크는 HTTPS 주소에서만 열립니다. (GitHub Pages는 자동 HTTPS)
